@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>高级正确率分析仪</title>
+    <title>正确率分析仪 (带历史记录)</title>
     <style>
         :root {
             --primary-color: #4a90e2;
@@ -11,156 +11,173 @@
             --danger-color: #e74c3c;
         }
         body {
-            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            font-family: 'PingFang SC', sans-serif;
+            background: #f0f2f5;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
             align-items: center;
-            min-height: 100vh;
+            padding: 20px;
             margin: 0;
         }
         .card {
             background: white;
-            padding: 30px;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
             width: 100%;
             max-width: 400px;
+            margin-bottom: 20px;
         }
-        h2 { text-align: center; color: #2c3e50; margin-bottom: 25px; }
-        .input-box { margin-bottom: 15px; }
-        label { display: block; font-size: 14px; color: #7f8c8d; margin-bottom: 5px; }
+        h2, h3 { text-align: center; color: #333; }
+        .input-box { margin-bottom: 12px; }
+        label { display: block; font-size: 13px; color: #666; margin-bottom: 4px; }
         input {
             width: 100%;
-            padding: 12px;
-            border: 2px solid #edf2f7;
-            border-radius: 10px;
-            font-size: 16px;
-            transition: border-color 0.3s;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
             box-sizing: border-box;
         }
-        input:focus { outline: none; border-color: var(--primary-color); }
-        
-        /* 进度条样式 */
         .progress-container {
-            height: 12px;
-            background: #edf2f7;
-            border-radius: 6px;
-            margin: 25px 0;
+            height: 10px;
+            background: #eee;
+            border-radius: 5px;
+            margin: 20px 0;
             overflow: hidden;
             display: none;
         }
-        .progress-bar {
-            height: 100%;
-            width: 0%;
-            transition: width 0.5s ease, background-color 0.5s;
-        }
-
-        .result-text {
-            text-align: center;
-            font-size: 24px;
-            font-weight: bold;
-            color: #2c3e50;
-            margin-bottom: 20px;
-            display: none;
-        }
+        .progress-bar { height: 100%; width: 0%; transition: 0.5s; }
+        .result-text { text-align: center; font-size: 20px; font-weight: bold; margin-bottom: 15px; display: none; }
+        
         .btn-group { display: flex; gap: 10px; }
         button {
-            flex: 1;
-            padding: 12px;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: bold;
-            transition: transform 0.2s;
+            flex: 1; padding: 10px; border: none; border-radius: 8px;
+            cursor: pointer; font-weight: bold;
         }
         .btn-calc { background: var(--primary-color); color: white; }
-        .btn-reset { background: #95a5a6; color: white; }
-        button:active { transform: scale(0.98); }
+        .btn-clear { background: #95a5a6; color: white; }
+
+        /* 历史记录样式 */
+        .history-card {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+        .history-list { list-style: none; padding: 0; max-height: 300px; overflow-y: auto; }
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
+        }
+        .history-item:last-child { border-bottom: none; }
+        .badge {
+            padding: 2px 8px;
+            border-radius: 4px;
+            color: white;
+            font-size: 12px;
+        }
     </style>
 </head>
 <body>
 
 <div class="card">
     <h2>正确率分析</h2>
-    
     <div class="input-box">
-        <label>样本总数 (Total)</label>
-        <input type="number" id="total" placeholder="0" oninput="autoSolve()">
+        <label>样本总数</label>
+        <input type="number" id="total" placeholder="输入总数">
     </div>
-    
     <div class="input-box">
-        <label>正确数 (Correct)</label>
-        <input type="number" id="correct" placeholder="0" oninput="syncInputs('c')">
-    </div>
-
-    <div class="input-box">
-        <label>错误数 (Wrong)</label>
-        <input type="number" id="wrong" placeholder="0" oninput="syncInputs('w')">
+        <label>正确数</label>
+        <input type="number" id="correct" placeholder="输入正确数">
     </div>
 
     <div class="progress-container" id="p-container">
         <div class="progress-bar" id="p-bar"></div>
     </div>
-
     <div class="result-text" id="res-text">0%</div>
 
     <div class="btn-group">
-        <button class="btn-reset" onclick="resetAll()">清空</button>
-        <button class="btn-calc" onclick="calculate()">即刻分析</button>
+        <button class="btn-clear" onclick="clearInputs()">重置</button>
+        <button class="btn-calc" onclick="calculate()">开始计算</button>
     </div>
 </div>
 
-<script>
-    // 自动根据总数和正确/错误数进行同步
-    function syncInputs(type) {
-        const total = parseFloat(document.getElementById('total').value) || 0;
-        if (total === 0) return;
+<div class="history-card">
+    <h3>最近记录 <button onclick="clearHistory()" style="font-size: 10px; padding: 2px 5px; background: #eee; color: #666; cursor: pointer; border-radius: 3px; border: none;">清空全部</button></h3>
+    <ul id="history-list" class="history-list">
+        </ul>
+</div>
 
-        if (type === 'c') {
-            const correct = parseFloat(document.getElementById('correct').value) || 0;
-            document.getElementById('wrong').value = Math.max(0, total - correct);
-        } else {
-            const wrong = parseFloat(document.getElementById('wrong').value) || 0;
-            document.getElementById('correct').value = Math.max(0, total - wrong);
-        }
-    }
+<script>
+    // 页面加载时读取历史
+    window.onload = displayHistory;
 
     function calculate() {
         const total = parseFloat(document.getElementById('total').value);
         const correct = parseFloat(document.getElementById('correct').value);
-        
-        if (!total || total <= 0) {
-            alert("请输入有效的总数");
+
+        if (!total || total <= 0 || isNaN(correct)) {
+            alert("请输入有效数值");
             return;
         }
 
-        const rate = (correct / total) * 100;
-        const finalRate = Math.min(Math.max(rate, 0), 100).toFixed(1);
-
-        // 显示结果
-        const resText = document.getElementById('res-text');
-        const pBar = document.getElementById('p-bar');
-        const pContainer = document.getElementById('p-container');
-
-        resText.style.display = 'block';
-        pContainer.style.display = 'block';
-        resText.innerText = `正确率：${finalRate}%`;
+        const rate = ((correct / total) * 100).toFixed(1);
         
-        // 更新进度条长度和颜色
-        pBar.style.width = finalRate + '%';
-        if (finalRate >= 90) pBar.style.backgroundColor = '#2ecc71';
-        else if (finalRate >= 60) pBar.style.backgroundColor = '#f1c40f';
-        else pBar.style.backgroundColor = '#e74c3c';
+        // 更新UI
+        updateUI(rate);
+        
+        // 保存到历史记录
+        saveToHistory(total, correct, rate);
     }
 
-    function resetAll() {
-        document.getElementById('total').value = '';
-        document.getElementById('correct').value = '';
-        document.getElementById('wrong').value = '';
-        document.getElementById('res-text').style.display = 'none';
-        document.getElementById('p-container').style.display = 'none';
+    function updateUI(rate) {
+        const resText = document.getElementById('res-text');
+        const pBar = document.getElementById('p-bar');
+        document.getElementById('p-container').style.display = 'block';
+        resText.style.display = 'block';
+        resText.innerText = `正确率：${rate}%`;
+        pBar.style.width = rate + '%';
+        pBar.style.backgroundColor = rate >= 60 ? '#2ecc71' : '#e74c3c';
+    }
+
+    function saveToHistory(total, correct, rate) {
+        let history = JSON.parse(localStorage.getItem('calc_history') || '[]');
+        const newItem = {
+            time: new Date().toLocaleString(),
+            data: `${correct}/${total}`,
+            rate: rate
+        };
+        history.unshift(newItem); // 添加到开头
+        history = history.slice(0, 10); // 只保留最近10条
+        localStorage.setItem('calc_history', JSON.stringify(history));
+        displayHistory();
+    }
+
+    function displayHistory() {
+        const history = JSON.parse(localStorage.getItem('calc_history') || '[]');
+        const list = document.getElementById('history-list');
+        list.innerHTML = history.map(item => `
+            <li class="history-item">
+                <span>${item.time.split(' ')[1]} <small>(${item.data})</small></span>
+                <span class="badge" style="background:${item.rate >= 60 ? '#2ecc71' : '#e74c3c'}">${item.rate}%</span>
+            </li>
+        `).join('');
+    }
+
+    function clearInputs() {
+        document.querySelectorAll('input').forEach(i => i.value = '');
+    }
+
+    function clearHistory() {
+        if(confirm('确定要删除所有历史记录吗？')) {
+            localStorage.removeItem('calc_history');
+            displayHistory();
+        }
     }
 </script>
 
