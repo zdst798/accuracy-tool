@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高级正确率分析仪</title>
+    <style>
+        :root {
+            --primary-color: #4a90e2;
+            --success-color: #2ecc71;
+            --danger-color: #e74c3c;
+        }
+        body {
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+        h2 { text-align: center; color: #2c3e50; margin-bottom: 25px; }
+        .input-box { margin-bottom: 15px; }
+        label { display: block; font-size: 14px; color: #7f8c8d; margin-bottom: 5px; }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #edf2f7;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+            box-sizing: border-box;
+        }
+        input:focus { outline: none; border-color: var(--primary-color); }
+        
+        /* 进度条样式 */
+        .progress-container {
+            height: 12px;
+            background: #edf2f7;
+            border-radius: 6px;
+            margin: 25px 0;
+            overflow: hidden;
+            display: none;
+        }
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            transition: width 0.5s ease, background-color 0.5s;
+        }
+
+        .result-text {
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .btn-group { display: flex; gap: 10px; }
+        button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+        .btn-calc { background: var(--primary-color); color: white; }
+        .btn-reset { background: #95a5a6; color: white; }
+        button:active { transform: scale(0.98); }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>正确率分析</h2>
+    
+    <div class="input-box">
+        <label>样本总数 (Total)</label>
+        <input type="number" id="total" placeholder="0" oninput="autoSolve()">
+    </div>
+    
+    <div class="input-box">
+        <label>正确数 (Correct)</label>
+        <input type="number" id="correct" placeholder="0" oninput="syncInputs('c')">
+    </div>
+
+    <div class="input-box">
+        <label>错误数 (Wrong)</label>
+        <input type="number" id="wrong" placeholder="0" oninput="syncInputs('w')">
+    </div>
+
+    <div class="progress-container" id="p-container">
+        <div class="progress-bar" id="p-bar"></div>
+    </div>
+
+    <div class="result-text" id="res-text">0%</div>
+
+    <div class="btn-group">
+        <button class="btn-reset" onclick="resetAll()">清空</button>
+        <button class="btn-calc" onclick="calculate()">即刻分析</button>
+    </div>
+</div>
+
+<script>
+    // 自动根据总数和正确/错误数进行同步
+    function syncInputs(type) {
+        const total = parseFloat(document.getElementById('total').value) || 0;
+        if (total === 0) return;
+
+        if (type === 'c') {
+            const correct = parseFloat(document.getElementById('correct').value) || 0;
+            document.getElementById('wrong').value = Math.max(0, total - correct);
+        } else {
+            const wrong = parseFloat(document.getElementById('wrong').value) || 0;
+            document.getElementById('correct').value = Math.max(0, total - wrong);
+        }
+    }
+
+    function calculate() {
+        const total = parseFloat(document.getElementById('total').value);
+        const correct = parseFloat(document.getElementById('correct').value);
+        
+        if (!total || total <= 0) {
+            alert("请输入有效的总数");
+            return;
+        }
+
+        const rate = (correct / total) * 100;
+        const finalRate = Math.min(Math.max(rate, 0), 100).toFixed(1);
+
+        // 显示结果
+        const resText = document.getElementById('res-text');
+        const pBar = document.getElementById('p-bar');
+        const pContainer = document.getElementById('p-container');
+
+        resText.style.display = 'block';
+        pContainer.style.display = 'block';
+        resText.innerText = `正确率：${finalRate}%`;
+        
+        // 更新进度条长度和颜色
+        pBar.style.width = finalRate + '%';
+        if (finalRate >= 90) pBar.style.backgroundColor = '#2ecc71';
+        else if (finalRate >= 60) pBar.style.backgroundColor = '#f1c40f';
+        else pBar.style.backgroundColor = '#e74c3c';
+    }
+
+    function resetAll() {
+        document.getElementById('total').value = '';
+        document.getElementById('correct').value = '';
+        document.getElementById('wrong').value = '';
+        document.getElementById('res-text').style.display = 'none';
+        document.getElementById('p-container').style.display = 'none';
+    }
+</script>
+
+</body>
+</html>
